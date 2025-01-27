@@ -57,7 +57,7 @@ app.get("/api/places/details/:placeId", async (req, res) => {
         // Fotoğrafları sınırlama
         const photos = (placeDetails.photos || []).slice(0, 5).map((photo) => ({
             photo_reference: photo.photo_reference,
-            attributions: photo.html_attributions || [],
+            attribution: photo.html_attributions?.[0] || "No attribution available",
         }));
 
         const formattedDetails = {
@@ -74,7 +74,7 @@ app.get("/api/places/details/:placeId", async (req, res) => {
 
         res.json(formattedDetails);
     } catch (error) {
-        console.error("Error fetching place details:", error.message);
+        console.error("Error fetching place details:", error.response?.data || error.message);
         res.status(500).json({ error: "Failed to fetch place details" });
     }
 });
