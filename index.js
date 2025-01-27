@@ -11,6 +11,12 @@ const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 // Middleware
 app.use(express.json());
 
+// Logging middleware for debugging
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+    next();
+});
+
 // Dinamik arama endpoint'i
 app.get("/api/places/search", async (req, res) => {
     const query = req.query.query;
@@ -27,7 +33,13 @@ app.get("/api/places/search", async (req, res) => {
                 key: GOOGLE_PLACES_API_KEY,
             },
         });
-        res.json(response.data.candidates || []);
+
+        // Backend'ten dönen veri formatı kontrolü
+        if (!response.data.candidates || !Array.isArray(response.data.candidates)) {
+            return res.status(500).json({ error: "Unexpected response format from Google Places API" });
+        }
+
+        res.json(response.data.candidates);
     } catch (error) {
         console.error("Error fetching places:", error.message);
         res.status(500).json({ error: "Failed to fetch places" });
@@ -65,6 +77,11 @@ app.get("/api/places/details/:placeId", async (req, res) => {
         console.error("Error fetching place details:", error.message);
         res.status(500).json({ error: "Failed to fetch place details" });
     }
+});
+
+// Hatalı endpoint'ler için middleware
+app.use((req, res) => {
+    res.status(404).json({ error: "Endpoint not found" });
 });
 
 // Sunucuyu başlat
