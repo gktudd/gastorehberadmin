@@ -48,6 +48,7 @@ app.get("/api/places/details/:placeId", async (req, res) => {
             params: {
                 place_id: placeId,
                 fields: "name,formatted_address,formatted_phone_number,url,geometry,opening_hours,rating,user_ratings_total,photos,reviews",
+                language: "tr", // Yorumların Türkçe olarak alınmasını zorlar
                 key: GOOGLE_PLACES_API_KEY,
             },
         });
@@ -65,7 +66,8 @@ app.get("/api/places/details/:placeId", async (req, res) => {
             author: review.author_name,
             rating: review.rating,
             text: review.text,
-            relative_time: review.relative_time_description, // "Kaç zaman geçti" bilgisi
+            time: review.relative_time_description, // "Kaç zaman geçti" bilgisi
+            original_language: review.language, // Orijinal dil bilgisi
         }));
 
         const formattedDetails = {
