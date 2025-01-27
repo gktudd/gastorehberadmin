@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
+const cors = require("cors");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,14 +11,9 @@ const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 
 // Middleware
 app.use(express.json());
+app.use(cors()); // CORS ekleniyor
 
-// Logging middleware for debugging
-app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-    next();
-});
-
-// Dinamik arama endpoint'i
+// Dinamik Arama Endpoint'i
 app.get("/api/places/search", async (req, res) => {
     const query = req.query.query;
     if (!query) {
@@ -33,19 +29,14 @@ app.get("/api/places/search", async (req, res) => {
                 key: GOOGLE_PLACES_API_KEY,
             },
         });
-
-        if (!response.data.candidates || !Array.isArray(response.data.candidates)) {
-            return res.status(500).json({ error: "Unexpected response format from Google Places API" });
-        }
-
-        res.json(response.data.candidates);
+        res.json(response.data.candidates || []);
     } catch (error) {
         console.error("Error fetching places:", error.message);
         res.status(500).json({ error: "Failed to fetch places" });
     }
 });
 
-// Mekan detayları endpoint'i
+// Mekan Detayları Endpoint'i
 app.get("/api/places/details/:placeId", async (req, res) => {
     const placeId = req.params.placeId;
     if (!placeId) {
@@ -56,30 +47,18 @@ app.get("/api/places/details/:placeId", async (req, res) => {
         const response = await axios.get("https://maps.googleapis.com/maps/api/place/details/json", {
             params: {
                 place_id: placeId,
-                fields: "name,formatted_address,formatted_phone_number,rating,geometry,user_ratings_total,opening_hours",
+                fields: "name,formatted_address,formatted_phone_number,website,geometry,photos",
                 key: GOOGLE_PLACES_API_KEY,
             },
         });
-
-        const placeDetails = response.data.result || {};
-
-        // Fotoğraf ve yorumlar kaldırıldı
-        delete placeDetails.photos;
-        delete placeDetails.reviews;
-
-        res.json(placeDetails);
+        res.json(response.data.result || {});
     } catch (error) {
         console.error("Error fetching place details:", error.message);
         res.status(500).json({ error: "Failed to fetch place details" });
     }
 });
 
-// Hatalı endpoint'ler için middleware
-app.use((req, res) => {
-    res.status(404).json({ error: "Endpoint not found" });
-});
-
-// Sunucuyu başlat
+// Sunucuyu Başlat
 app.listen(PORT, () => {
     console.log(`Proxy server çalışıyor: http://localhost:${PORT}`);
 });
