@@ -47,11 +47,24 @@ app.get("/api/places/details/:placeId", async (req, res) => {
         const response = await axios.get("https://maps.googleapis.com/maps/api/place/details/json", {
             params: {
                 place_id: placeId,
-                fields: "name,formatted_address,formatted_phone_number,website,geometry,photos",
+                fields: "name,formatted_address,formatted_phone_number,website,geometry,opening_hours",
                 key: GOOGLE_PLACES_API_KEY,
             },
         });
-        res.json(response.data.result || {});
+
+        const placeDetails = response.data.result || {};
+
+        // Açılış saatlerini ekliyoruz
+        const formattedDetails = {
+            name: placeDetails.name,
+            address: placeDetails.formatted_address,
+            phone: placeDetails.formatted_phone_number,
+            website: placeDetails.website,
+            geometry: placeDetails.geometry,
+            opening_hours: placeDetails.opening_hours || "Not available",
+        };
+
+        res.json(formattedDetails);
     } catch (error) {
         console.error("Error fetching place details:", error.message);
         res.status(500).json({ error: "Failed to fetch place details" });
