@@ -47,16 +47,24 @@ app.get("/api/places/details/:placeId", async (req, res) => {
         const response = await axios.get("https://maps.googleapis.com/maps/api/place/details/json", {
             params: {
                 place_id: placeId,
-                fields: "name,formatted_address,formatted_phone_number,url,geometry,opening_hours,rating,user_ratings_total,photos",
+                fields: "name,formatted_address,formatted_phone_number,url,geometry,opening_hours,rating,user_ratings_total,photos,reviews",
                 key: GOOGLE_PLACES_API_KEY,
             },
         });
 
         const placeDetails = response.data.result || {};
 
+        // Fotoğrafları sınırla ve URL'leri oluştur
         const photos = (placeDetails.photos || []).slice(0, 5).map((photo) => ({
             url: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photo.photo_reference}&key=${GOOGLE_PLACES_API_KEY}`,
             attributions: photo.html_attributions || [],
+        }));
+
+        // İlk 10 yorumu al
+        const reviews = (placeDetails.reviews || []).slice(0, 10).map((review) => ({
+            author: review.author_name,
+            rating: review.rating,
+            text: review.text,
         }));
 
         const formattedDetails = {
@@ -69,6 +77,7 @@ app.get("/api/places/details/:placeId", async (req, res) => {
             rating: placeDetails.rating || "N/A",
             user_ratings_total: placeDetails.user_ratings_total || 0,
             photos, // Fotoğrafları URL'ler ile birlikte ekliyoruz
+            reviews, // İlk 10 yorumu ekliyoruz
         };
 
         res.json(formattedDetails);
