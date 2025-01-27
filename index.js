@@ -11,7 +11,7 @@ const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 
 // Middleware
 app.use(express.json());
-app.use(cors()); // CORS ekleniyor
+app.use(cors());
 
 // Dinamik Arama Endpoint'i
 app.get("/api/places/search", async (req, res) => {
@@ -54,10 +54,9 @@ app.get("/api/places/details/:placeId", async (req, res) => {
 
         const placeDetails = response.data.result || {};
 
-        // Fotoğrafları sınırlama
         const photos = (placeDetails.photos || []).slice(0, 5).map((photo) => ({
-            photo_reference: photo.photo_reference,
-            attribution: photo.html_attributions?.[0] || "No attribution available",
+            url: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photo.photo_reference}&key=${GOOGLE_PLACES_API_KEY}`,
+            attributions: photo.html_attributions || [],
         }));
 
         const formattedDetails = {
@@ -65,16 +64,16 @@ app.get("/api/places/details/:placeId", async (req, res) => {
             address: placeDetails.formatted_address,
             phone: placeDetails.formatted_phone_number,
             url: placeDetails.url,
-            geometry: placeDetails.geometry, // Lat/Lng bilgileri
+            geometry: placeDetails.geometry,
             opening_hours: placeDetails.opening_hours || "Not available",
             rating: placeDetails.rating || "N/A",
             user_ratings_total: placeDetails.user_ratings_total || 0,
-            photos, // Fotoğrafları ekliyoruz
+            photos, // Fotoğrafları URL'ler ile birlikte ekliyoruz
         };
 
         res.json(formattedDetails);
     } catch (error) {
-        console.error("Error fetching place details:", error.response?.data || error.message);
+        console.error("Error fetching place details:", error.message);
         res.status(500).json({ error: "Failed to fetch place details" });
     }
 });
