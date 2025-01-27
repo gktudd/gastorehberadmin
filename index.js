@@ -47,21 +47,21 @@ app.get("/api/places/details/:placeId", async (req, res) => {
         const response = await axios.get("https://maps.googleapis.com/maps/api/place/details/json", {
             params: {
                 place_id: placeId,
-                fields: "name,formatted_address,formatted_phone_number,website,geometry,opening_hours",
+                fields: "name,formatted_address,formatted_phone_number,website,geometry,opening_hours,url",
                 key: GOOGLE_PLACES_API_KEY,
             },
         });
 
         const placeDetails = response.data.result || {};
 
-        // Açılış saatlerini ekliyoruz
+        // İlgili alanlar
         const formattedDetails = {
             name: placeDetails.name,
-            address: placeDetails.formatted_address,
-            phone: placeDetails.formatted_phone_number,
-            website: placeDetails.website,
-            geometry: placeDetails.geometry,
+            formatted_address: placeDetails.formatted_address,
+            place_id: placeDetails.place_id,
+            url: placeDetails.url,
             opening_hours: placeDetails.opening_hours || "Not available",
+            formatted_phone_number: placeDetails.formatted_phone_number || "Not available",
         };
 
         res.json(formattedDetails);
