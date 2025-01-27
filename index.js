@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
+const cors = require("cors");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,6 +11,7 @@ const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 
 // Middleware
 app.use(express.json());
+app.use(cors()); // CORS ekleniyor
 
 // Dinamik Arama Endpoint'i
 app.get("/api/places/search", async (req, res) => {
