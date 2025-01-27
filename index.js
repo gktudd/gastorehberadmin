@@ -54,21 +54,20 @@ app.get("/api/places/details/:placeId", async (req, res) => {
 
         const placeDetails = response.data.result || {};
 
-        const photos = (placeDetails.photos || []).slice(0, 5).map((photo) => ({
-            url: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photo.photo_reference}&key=${GOOGLE_PLACES_API_KEY}`,
-            attributions: photo.html_attributions || [],
-        }));
-
+        // Alanları düzenliyoruz
         const formattedDetails = {
             name: placeDetails.name,
-            address: placeDetails.formatted_address,
-            phone: placeDetails.formatted_phone_number,
+            address: placeDetails.formatted_address || "Adres bulunamadı",
+            phone: placeDetails.formatted_phone_number || "Telefon bulunamadı",
             url: placeDetails.url,
-            geometry: placeDetails.geometry,
+            geometry: placeDetails.geometry, // Lat/Lng bilgileri
             opening_hours: placeDetails.opening_hours || "Not available",
             rating: placeDetails.rating || "N/A",
             user_ratings_total: placeDetails.user_ratings_total || 0,
-            photos, // Fotoğrafları URL'ler ile birlikte ekliyoruz
+            photos: (placeDetails.photos || []).slice(0, 5).map((photo) => ({
+                photo_reference: photo.photo_reference,
+                attributions: photo.html_attributions || [],
+            })),
         };
 
         res.json(formattedDetails);
