@@ -36,25 +36,14 @@ app.get("/api/places/search", async (req, res) => {
     }
 });
 
-// Tarih bilgisini Türkçe çevirme fonksiyonu
-const translateRelativeTime = (relativeTime) => {
-    if (!relativeTime) return "Zaman bilgisi yok";
-    return relativeTime
-        .replace("year", "yıl")
-        .replace("years", "yıl")
-        .replace("month", "ay")
-        .replace("months", "ay")
-        .replace("week", "hafta")
-        .replace("weeks", "hafta")
-        .replace("day", "gün")
-        .replace("days", "gün")
-        .replace("hour", "saat")
-        .replace("hours", "saat")
-        .replace("minute", "dakika")
-        .replace("minutes", "dakika")
-        .replace("second", "saniye")
-        .replace("seconds", "saniye")
-        .replace("ago", "önce");
+// Tarih formatlama fonksiyonu
+const formatTimestamp = (timestamp) => {
+    if (!timestamp) return "Zaman bilgisi yok";
+    const date = new Date(timestamp * 1000); // Google API zaman damgasını işliyoruz
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`; // "Gün/Ay/Yıl" formatı
 };
 
 // Mekan Detayları Endpoint'i
@@ -69,7 +58,7 @@ app.get("/api/places/details/:placeId", async (req, res) => {
             params: {
                 place_id: placeId,
                 fields: "name,formatted_address,formatted_phone_number,url,geometry,opening_hours,rating,user_ratings_total,photos,reviews",
-                language: "tr", // Yorumların Türkçe olarak alınmasını zorlar
+                language: "tr", // Türkçe yorumlar için
                 key: GOOGLE_PLACES_API_KEY,
             },
         });
@@ -82,25 +71,25 @@ app.get("/api/places/details/:placeId", async (req, res) => {
             attributions: photo.html_attributions || [],
         }));
 
-        // İlk 10 yorumu al, zaman bilgisini çevir
+        // İlk 10 yorumu al, ham tarih ile formatlı zaman bilgisi ekle
         const reviews = (placeDetails.reviews || []).slice(0, 10).map((review) => ({
             author: review.author_name,
             rating: review.rating,
             text: review.text,
-            time: translateRelativeTime(review.relative_time_description), // Zaman bilgisini çevir
+            time: formatTimestamp(review.time), // Zaman damgasını formatlıyoruz
         }));
 
         const formattedDetails = {
             name: placeDetails.name,
-            address: placeDetails.formatted_address,
-            phone: placeDetails.formatted_phone_number,
-            url: placeDetails.url,
-            geometry: placeDetails.geometry,
-            opening_hours: placeDetails.opening_hours || "Not available",
+            address: placeDetails.formatted_address || "Adres bilgisi yok",
+            phone: placeDetails.formatted_phone_number || "Telefon bilgisi yok",
+            url: placeDetails.url || "URL bilgisi yok",
+            geometry: placeDetails.geometry || "Lokasyon bilgisi yok",
+            opening_hours: placeDetails.opening_hours || "Çalışma saatleri bilgisi yok",
             rating: placeDetails.rating || "N/A",
             user_ratings_total: placeDetails.user_ratings_total || 0,
-            photos, // Fotoğrafları URL'ler ile birlikte ekliyoruz
-            reviews, // İlk 10 yorumu ekliyoruz
+            photos, // Fotoğrafları ekliyoruz
+            reviews, // Yorumları ekliyoruz
         };
 
         res.json(formattedDetails);
