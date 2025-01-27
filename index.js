@@ -36,6 +36,27 @@ app.get("/api/places/search", async (req, res) => {
     }
 });
 
+// Tarih bilgisini Türkçe çevirme fonksiyonu
+const translateRelativeTime = (relativeTime) => {
+    if (!relativeTime) return "Zaman bilgisi yok";
+    return relativeTime
+        .replace("year", "yıl")
+        .replace("years", "yıl")
+        .replace("month", "ay")
+        .replace("months", "ay")
+        .replace("week", "hafta")
+        .replace("weeks", "hafta")
+        .replace("day", "gün")
+        .replace("days", "gün")
+        .replace("hour", "saat")
+        .replace("hours", "saat")
+        .replace("minute", "dakika")
+        .replace("minutes", "dakika")
+        .replace("second", "saniye")
+        .replace("seconds", "saniye")
+        .replace("ago", "önce");
+};
+
 // Mekan Detayları Endpoint'i
 app.get("/api/places/details/:placeId", async (req, res) => {
     const placeId = req.params.placeId;
@@ -61,13 +82,12 @@ app.get("/api/places/details/:placeId", async (req, res) => {
             attributions: photo.html_attributions || [],
         }));
 
-        // İlk 10 yorumu al ve zaman bilgisini ekle
+        // İlk 10 yorumu al, zaman bilgisini çevir
         const reviews = (placeDetails.reviews || []).slice(0, 10).map((review) => ({
             author: review.author_name,
             rating: review.rating,
             text: review.text,
-            time: review.relative_time_description, // "Kaç zaman geçti" bilgisi
-            original_language: review.language, // Orijinal dil bilgisi
+            time: translateRelativeTime(review.relative_time_description), // Zaman bilgisini çevir
         }));
 
         const formattedDetails = {
