@@ -1,7 +1,6 @@
 require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
-const cors = require("cors");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -11,9 +10,8 @@ const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 
 // Middleware
 app.use(express.json());
-app.use(cors()); // CORS ekleniyor
 
-// Dinamik Arama Endpoint'i
+// Dinamik arama endpoint'i
 app.get("/api/places/search", async (req, res) => {
     const query = req.query.query;
     if (!query) {
@@ -36,7 +34,7 @@ app.get("/api/places/search", async (req, res) => {
     }
 });
 
-// Mekan Detayları Endpoint'i
+// Mekan detayları endpoint'i
 app.get("/api/places/details/:placeId", async (req, res) => {
     const placeId = req.params.placeId;
     if (!placeId) {
@@ -47,18 +45,29 @@ app.get("/api/places/details/:placeId", async (req, res) => {
         const response = await axios.get("https://maps.googleapis.com/maps/api/place/details/json", {
             params: {
                 place_id: placeId,
-                fields: "name,formatted_address,formatted_phone_number,website,geometry,photos",
+                fields: "name,formatted_address,formatted_phone_number,rating,geometry,user_ratings_total,opening_hours,photos,reviews",
                 key: GOOGLE_PLACES_API_KEY,
             },
         });
-        res.json(response.data.result || {});
+
+        const placeDetails = response.data.result || {};
+
+        // Fotoğrafları sınırla
+        if (placeDetails.photos) {
+            placeDetails.photos = placeDetails.photos.slice(0, 5).map(photo => ({
+                photo_reference: photo.photo_reference,
+                html_attributions: photo.html_attributions
+            }));
+        }
+
+        res.json(placeDetails);
     } catch (error) {
         console.error("Error fetching place details:", error.message);
         res.status(500).json({ error: "Failed to fetch place details" });
     }
 });
 
-// Sunucuyu Başlat
+// Sunucuyu başlat
 app.listen(PORT, () => {
     console.log(`Proxy server çalışıyor: http://localhost:${PORT}`);
 });
