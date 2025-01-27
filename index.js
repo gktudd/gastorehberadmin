@@ -34,7 +34,6 @@ app.get("/api/places/search", async (req, res) => {
             },
         });
 
-        // Backend'ten dönen veri formatı kontrolü
         if (!response.data.candidates || !Array.isArray(response.data.candidates)) {
             return res.status(500).json({ error: "Unexpected response format from Google Places API" });
         }
@@ -57,20 +56,16 @@ app.get("/api/places/details/:placeId", async (req, res) => {
         const response = await axios.get("https://maps.googleapis.com/maps/api/place/details/json", {
             params: {
                 place_id: placeId,
-                fields: "name,formatted_address,formatted_phone_number,rating,geometry,user_ratings_total,opening_hours,photos,reviews",
+                fields: "name,formatted_address,formatted_phone_number,rating,geometry,user_ratings_total,opening_hours",
                 key: GOOGLE_PLACES_API_KEY,
             },
         });
 
         const placeDetails = response.data.result || {};
 
-        // Fotoğrafları sınırla
-        if (placeDetails.photos) {
-            placeDetails.photos = placeDetails.photos.slice(0, 5).map(photo => ({
-                photo_reference: photo.photo_reference,
-                html_attributions: photo.html_attributions
-            }));
-        }
+        // Fotoğraf ve yorumlar kaldırıldı
+        delete placeDetails.photos;
+        delete placeDetails.reviews;
 
         res.json(placeDetails);
     } catch (error) {
