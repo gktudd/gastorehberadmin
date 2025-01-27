@@ -60,13 +60,13 @@ app.get("/api/places/details/:placeId", async (req, res) => {
             attributions: photo.html_attributions || [],
         }));
 
-        // İlk 10 yorumu al, yalnızca orijinal dili döndür
+        // İlk 10 yorumu al ve zaman bilgisini ekle
         const reviews = (placeDetails.reviews || []).slice(0, 10).map((review) => ({
             author: review.author_name,
             rating: review.rating,
-            text: review.text, // Orijinal metni al
-            original_language: review.language, // Orijinal dil bilgisi
-        })).filter((review) => review.original_language === "tr"); // Sadece Türkçe yorumları al
+            text: review.text,
+            relative_time: review.relative_time_description, // "Kaç zaman geçti" bilgisi
+        }));
 
         const formattedDetails = {
             name: placeDetails.name,
@@ -78,7 +78,7 @@ app.get("/api/places/details/:placeId", async (req, res) => {
             rating: placeDetails.rating || "N/A",
             user_ratings_total: placeDetails.user_ratings_total || 0,
             photos, // Fotoğrafları URL'ler ile birlikte ekliyoruz
-            reviews, // İlk 10 Türkçe yorumu ekliyoruz
+            reviews, // İlk 10 yorumu ekliyoruz
         };
 
         res.json(formattedDetails);
