@@ -13,7 +13,7 @@ const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 app.use(express.json());
 app.use(cors());
 
-// Dinamik Arama Endpoint'i
+// Dinamik Arama Endpoint'i (Türkiye ile sınırlandırıldı)
 app.get("/api/places/search", async (req, res) => {
     const query = req.query.query;
     if (!query) {
@@ -26,6 +26,7 @@ app.get("/api/places/search", async (req, res) => {
                 input: query,
                 inputtype: "textquery",
                 fields: "place_id,name,formatted_address",
+                locationbias: "circle:1000000@39.9334,32.8597", // Türkiye'yi merkez alarak 1000 km yarıçapında sınırlandırma
                 key: GOOGLE_PLACES_API_KEY,
             },
         });
@@ -36,10 +37,10 @@ app.get("/api/places/search", async (req, res) => {
     }
 });
 
-// Tarih formatlama fonksiyonu
+// Tarih formatlama fonksiyonu (Gün/Ay/Yıl)
 const formatTimestamp = (timestamp) => {
     if (!timestamp) return "Zaman bilgisi yok";
-    const date = new Date(timestamp * 1000); // Google API zaman damgasını işliyoruz
+    const date = new Date(timestamp * 1000); // Google API zaman damgasını dönüştür
     const day = date.getDate().toString().padStart(2, "0");
     const month = (date.getMonth() + 1).toString().padStart(2, "0");
     const year = date.getFullYear();
