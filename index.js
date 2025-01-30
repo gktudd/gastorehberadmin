@@ -13,7 +13,7 @@ const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 app.use(express.json());
 app.use(cors());
 
-// 📌 Dinamik Arama Endpoint'i (Türkiye ile sınırlandırıldı)
+// Dinamik Arama Endpoint'i (Türkiye ile sınırlandırıldı)
 app.get("/api/places/search", async (req, res) => {
     const query = req.query.query;
     if (!query) {
@@ -26,11 +26,10 @@ app.get("/api/places/search", async (req, res) => {
                 input: query,
                 inputtype: "textquery",
                 fields: "place_id,name,formatted_address",
-                locationbias: "circle:1000000@39.9334,32.8597", // Türkiye'yi merkez alarak 1000 km yarıçapında sınırlandırma
+                locationbias: "circle:1000000@39.9334,32.8597",
                 key: GOOGLE_PLACES_API_KEY,
             },
         });
-
         res.json(response.data.candidates || []);
     } catch (error) {
         console.error("Error fetching places:", error.message);
@@ -38,7 +37,7 @@ app.get("/api/places/search", async (req, res) => {
     }
 });
 
-// 📌 Mekan Detayları Endpoint'i
+// Mekan Detayları Endpoint'i
 app.get("/api/places/details/:placeId", async (req, res) => {
     const placeId = req.params.placeId;
     if (!placeId) {
@@ -50,7 +49,7 @@ app.get("/api/places/details/:placeId", async (req, res) => {
             params: {
                 place_id: placeId,
                 fields: "place_id,name,formatted_address,formatted_phone_number,url,geometry,opening_hours",
-                language: "tr", // Türkçe için
+                language: "tr",
                 key: GOOGLE_PLACES_API_KEY,
             },
         });
@@ -58,13 +57,13 @@ app.get("/api/places/details/:placeId", async (req, res) => {
         const placeDetails = response.data.result || {};
 
         const formattedDetails = {
-            place_id: placeDetails.place_id, // Google'un verdiği benzersiz ID
-            name: placeDetails.name,
-            address: placeDetails.formatted_address || "Adres bilgisi yok",
-            phone: placeDetails.formatted_phone_number || "Telefon bilgisi yok",
-            url: placeDetails.url || "URL bilgisi yok",
-            geometry: placeDetails.geometry || "Lokasyon bilgisi yok",
-            opening_hours: placeDetails.opening_hours?.weekday_text || [],
+            place_id: placeDetails.place_id || "",
+            name: placeDetails.name || "",
+            address: placeDetails.formatted_address || "",
+            phone: placeDetails.formatted_phone_number || "",
+            url: placeDetails.url || "",
+            geometry: placeDetails.geometry || null,
+            opening_hours: placeDetails.opening_hours?.weekday_text || null,
         };
 
         res.json(formattedDetails);
@@ -74,7 +73,7 @@ app.get("/api/places/details/:placeId", async (req, res) => {
     }
 });
 
-// 📌 Sunucuyu Başlat
+// Sunucuyu Başlat
 app.listen(PORT, () => {
-    console.log(`✅ Proxy API çalışıyor: http://localhost:${PORT}`);
+    console.log(`Proxy server çalışıyor: http://localhost:${PORT}`);
 });
