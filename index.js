@@ -102,12 +102,23 @@ app.post("/api/send-notification", async (req, res) => {
 
   try {
     const message = {
-      token: fcmToken,
-      notification: {
-        title,
-        body,
-      },
-    };
+        token: fcmToken,
+        notification: {
+          title,
+          body
+        },
+        apns: {
+          payload: {
+            aps: {
+              alert: {
+                title,
+                body
+              },
+              sound: "default"
+            }
+          }
+        }
+      };
 
     const response = await admin.messaging().send(message);
     console.log("✅ Bildirim gönderildi:", response);
