@@ -6,14 +6,15 @@ const cors = require("cors");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Google Places API Key
+// API Key'ler
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
+const FCM_SERVER_KEY = process.env.FCM_SERVER_KEY; // ← 🔐 .env'e eklemen gereken FCM Key
 
 // Middleware
 app.use(express.json());
 app.use(cors());
 
-// 📌 Dinamik Arama Endpoint'i (Türkiye ile sınırlandırıldı)
+/* 📌 GOOGLE PLACES API BÖLÜMÜ */
 app.get("/api/places/search", async (req, res) => {
     const query = req.query.query;
     if (!query) {
@@ -37,7 +38,6 @@ app.get("/api/places/search", async (req, res) => {
     }
 });
 
-// 📌 Mekan Detayları Endpoint'i
 app.get("/api/places/details/:placeId", async (req, res) => {
     const placeId = req.params.placeId;
     if (!placeId) {
@@ -55,16 +55,8 @@ app.get("/api/places/details/:placeId", async (req, res) => {
         });
 
         const placeDetails = response.data.result || {};
+        const workingHours = placeDetails.opening_hours?.weekday_text || ["Çalışma saatleri mevcut değil"];
 
-        // 📌 Çalışma Saatleri (`opening_hours.weekday_text`) Doğru Şekilde Alınıyor
-        let workingHours = [];
-        if (placeDetails.opening_hours && placeDetails.opening_hours.weekday_text) {
-            workingHours = placeDetails.opening_hours.weekday_text;
-        } else {
-            workingHours = ["Çalışma saatleri mevcut değil"];
-        }
-
-        // 📌 Formatlanmış JSON Yanıtı
         const formattedDetails = {
             place_id: placeDetails.place_id || "",
             name: placeDetails.name || "",
@@ -75,7 +67,7 @@ app.get("/api/places/details/:placeId", async (req, res) => {
                 lat: placeDetails.geometry.location.lat,
                 lng: placeDetails.geometry.location.lng
             } : null,
-            workingHours // Yeni formatta çalışma saatleri
+            workingHours
         };
 
         res.json(formattedDetails);
@@ -85,7 +77,37 @@ app.get("/api/places/details/:placeId", async (req, res) => {
     }
 });
 
-// 📌 Sunucuyu Başlat
+/* 📣 YENİ EKLENDİ: FCM BİLDİRİM GÖNDERME */
+app.post("/api/send-notification", async (req, res) => {
+    const { fcmToken, title, body } = req.body;
+
+    if (!fcmToken || !title || !body) {
+        return res.status(400).json({ error: "Eksik parametre: fcmToken, title, body gerekli." });
+    }
+
+    try {
+        const result = await axios.post(
+            "https://fcm.googleapis.com/fcm/send",
+            {
+                to: fcmToken,
+                notification: { title, body }
+            },
+            {
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `key=${FCM_SERVER_KEY}`,
+                }
+            }
+        );
+
+        res.json({ success: true, result: result.data });
+    } catch (error) {
+        console.error("FCM bildirim hatası:", error.message);
+        res.status(500).json({ success: false, error: "Bildirim gönderilemedi." });
+    }
+});
+
+/* 🔧 Sunucuyu Başlat */
 app.listen(PORT, () => {
-    console.log(`Proxy server çalışıyor: http://localhost:${PORT}`);
+    console.log(`Proxy + FCM sunucusu çalışıyor: http://localhost:${PORT}`);
 });
