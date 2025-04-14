@@ -6,7 +6,7 @@ const cors = require("cors");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// API Key'ler
+// API Key'leri test ediyoruz
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 const FCM_SERVER_KEY = process.env.FCM_SERVER_KEY; // ← 🔐 .env'e eklemen gereken FCM Key
 
