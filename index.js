@@ -94,36 +94,45 @@ app.get("/api/places/details/:placeId", async (req, res) => {
 
 /* 📣 FCM BİLDİRİM GÖNDERME (V1) */
 app.post("/api/send-notification", async (req, res) => {
-    const { fcmToken, title, body } = req.body;
-  
-    if (!fcmToken || !title || !body) {
-      return res.status(400).json({ error: "Eksik parametre: fcmToken, title, body gerekli." });
-    }
-  
-    try {
-      const message = {
-        token: fcmToken,
-        notification: {
-          title,
-          body,
-        },
-        android: {
-          priority: "high", // 🔥 HEADS-UP için kritik
-          notification: {
-            sound: "default", // Ses gelsin diye
-            channelId: "default", // İzin varsa heads-up verir
-          },
-        },
-      };
-  
-      const response = await admin.messaging().send(message);
-      console.log("✅ Bildirim gönderildi:", response);
-      res.json({ success: true, messageId: response });
-    } catch (error) {
-      console.error("💥 FCM gönderim hatası:", error.message);
-      res.status(500).json({ success: false, error: "Bildirim gönderilemedi." });
-    }
-  });
+  const { fcmToken, title, body } = req.body;
+
+  if (!fcmToken || !title || !body) {
+    return res.status(400).json({
+      error: "Eksik parametre: fcmToken, title, body gerekli.",
+    });
+  }
+
+  // 🔍 Gönderilecek mesajın içeriğini göster
+  const message = {
+    token: fcmToken,
+    notification: {
+      title,
+      body,
+    },
+    android: {
+      priority: "high",
+      notification: {
+        sound: "default",
+        channelId: "default",
+        notificationCount: 1, // Bazı cihazlarda heads-up'ı tetikler
+      },
+    },
+  };
+
+  console.log("📤 Bildirim gönderiliyor:", JSON.stringify(message, null, 2));
+
+  try {
+    const response = await admin.messaging().send(message);
+    console.log("✅ Bildirim başarıyla gönderildi:", response);
+    res.json({ success: true, messageId: response });
+  } catch (error) {
+    console.error("💥 Bildirim gönderim hatası:", error); // tüm error objesi
+    res.status(500).json({
+      success: false,
+      error: error?.message || "Bilinmeyen bir hata oluştu.",
+    });
+  }
+});
 
 /* 🚀 SUNUCU BAŞLAT */
 app.listen(PORT, () => {
