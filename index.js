@@ -102,7 +102,6 @@ app.post("/api/send-notification", async (req, res) => {
     });
   }
 
-  // 🔍 Gönderilecek mesajın içeriğini göster
   const message = {
     token: fcmToken,
     notification: {
@@ -114,7 +113,7 @@ app.post("/api/send-notification", async (req, res) => {
       notification: {
         sound: "default",
         channelId: "default",
-        notificationCount: 1, // Bazı cihazlarda heads-up'ı tetikler
+        notificationCount: 1,
       },
     },
   };
@@ -126,7 +125,7 @@ app.post("/api/send-notification", async (req, res) => {
     console.log("✅ Bildirim başarıyla gönderildi:", response);
     res.json({ success: true, messageId: response });
   } catch (error) {
-    console.error("💥 Bildirim gönderim hatası:", error); // tüm error objesi
+    console.error("💥 Bildirim gönderim hatası:", error);
     res.status(500).json({
       success: false,
       error: error?.message || "Bilinmeyen bir hata oluştu.",
@@ -134,7 +133,64 @@ app.post("/api/send-notification", async (req, res) => {
   }
 });
 
+/* 👀 Takipçi değişimini sürekli dinle */
+function detectFollowersChanges() {
+  const db = admin.firestore();
+  const usersRef = db.collection("users");
+
+  usersRef.onSnapshot((snapshot) => {
+    snapshot.docChanges().forEach((change) => {
+      const doc = change.doc;
+      const data = doc.data();
+      const userId = doc.id;
+
+      if (change.type === "modified") {
+        const previous = change.oldIndex >= 0 ? snapshot.docs[change.oldIndex]?.data() : null;
+        const oldFollowers = previous?.followers || [];
+        const newFollowers = data.followers || [];
+
+        if (newFollowers.length > oldFollowers.length) {
+          const newFollower = newFollowers.find(f => !oldFollowers.includes(f));
+          console.log(`👤 ${userId} için yeni takipçi: ${newFollower}`);
+
+          const fcmToken = data.fcmToken;
+          if (fcmToken) {
+            const msg = {
+              token: fcmToken,
+              notification: {
+                title: "Yeni Takipçin Var!",
+                body: "Bir kullanıcı seni takip etti.",
+              },
+              android: {
+                priority: "high",
+                notification: {
+                  sound: "default",
+                  channelId: "default",
+                  notificationCount: 1,
+                },
+              },
+            };
+
+            admin.messaging().send(msg)
+              .then((response) => {
+                console.log(`✅ Bildirim gönderildi: ${response}`);
+              })
+              .catch((error) => {
+                console.error("❌ Bildirim gönderilemedi:", error.message);
+              });
+          } else {
+            console.warn(`⚠️ Kullanıcının fcmToken'ı yok: ${userId}`);
+          }
+        }
+      }
+    });
+  }, (error) => {
+    console.error("🔥 Firestore takip dinleme hatası:", error);
+  });
+}
+
 /* 🚀 SUNUCU BAŞLAT */
 app.listen(PORT, () => {
   console.log(`🚀 Proxy + FCM sunucusu çalışıyor: http://localhost:${PORT}`);
+  detectFollowersChanges(); // 🔔 Dinleme başlasın
 });
