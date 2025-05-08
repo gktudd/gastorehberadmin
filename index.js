@@ -2,15 +2,16 @@ require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
-const admin = require("firebase-admin");
+const admin = require("firebase-admin"); // 🔥 Firebase Admin SDK
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// API Key'ler
+// 🔑 API KEY'LER
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 const FIREBASE_ADMIN_SDK_BASE64 = process.env.FIREBASE_ADMIN_SDK_BASE64;
 
+// ✅ Admin SDK base64 string'den initialize
 if (!FIREBASE_ADMIN_SDK_BASE64) {
   console.error("❌ FIREBASE_ADMIN_SDK_BASE64 tanımlı değil!");
   process.exit(1);
@@ -23,13 +24,12 @@ const serviceAccount = JSON.parse(
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
-
-const db = admin.firestore();
-
+ 
+// Middleware
 app.use(express.json());
 app.use(cors());
 
-/* 🌍 Google Places API */
+/* 📌 GOOGLE PLACES API */
 app.get("/api/places/search", async (req, res) => {
   const query = req.query.query;
   if (!query) {
@@ -53,7 +53,6 @@ app.get("/api/places/search", async (req, res) => {
   }
 });
 
-/* 📍 Place Details */
 app.get("/api/places/details/:placeId", async (req, res) => {
   const placeId = req.params.placeId;
   if (!placeId) {
@@ -70,23 +69,30 @@ app.get("/api/places/details/:placeId", async (req, res) => {
       },
     });
 
-    const result = response.data.result || {};
-    res.json({
-      place_id: result.place_id || "",
-      name: result.name || "",
-      address: result.formatted_address || "",
-      phone: result.formatted_phone_number || "",
-      url: result.url || "",
-      geometry: result.geometry?.location || null,
-      workingHours: result.opening_hours?.weekday_text || [],
-    });
+    const placeDetails = response.data.result || {};
+    const workingHours = placeDetails.opening_hours?.weekday_text || ["Çalışma saatleri mevcut değil"];
+
+    const formattedDetails = {
+      place_id: placeDetails.place_id || "",
+      name: placeDetails.name || "",
+      address: placeDetails.formatted_address || "",
+      phone: placeDetails.formatted_phone_number || "",
+      url: placeDetails.url || "",
+      geometry: placeDetails.geometry ? {
+        lat: placeDetails.geometry.location.lat,
+        lng: placeDetails.geometry.location.lng
+      } : null,
+      workingHours
+    };
+
+    res.json(formattedDetails);
   } catch (error) {
     console.error("❌ Error fetching place details:", error.message);
     res.status(500).json({ error: "Failed to fetch place details" });
   }
 });
 
-/* 📣 Manuel FCM Bildirim API */
+/* 📣 FCM BİLDİRİM GÖNDERME (V1) */
 app.post("/api/send-notification", async (req, res) => {
   const { fcmToken, title, body } = req.body;
 
@@ -96,82 +102,39 @@ app.post("/api/send-notification", async (req, res) => {
     });
   }
 
+  // 🔍 Gönderilecek mesajın içeriğini göster
   const message = {
     token: fcmToken,
-    notification: { title, body },
+    notification: {
+      title,
+      body,
+    },
     android: {
       priority: "high",
       notification: {
         sound: "default",
         channelId: "default",
-        notificationCount: 1,
+        notificationCount: 1, // Bazı cihazlarda heads-up'ı tetikler
       },
     },
   };
 
+  console.log("📤 Bildirim gönderiliyor:", JSON.stringify(message, null, 2));
+
   try {
     const response = await admin.messaging().send(message);
-    console.log("✅ Bildirim gönderildi:", response);
+    console.log("✅ Bildirim başarıyla gönderildi:", response);
     res.json({ success: true, messageId: response });
   } catch (error) {
-    console.error("💥 Bildirim hatası:", error.message);
-    res.status(500).json({ success: false, error: error?.message });
+    console.error("💥 Bildirim gönderim hatası:", error); // tüm error objesi
+    res.status(500).json({
+      success: false,
+      error: error?.message || "Bilinmeyen bir hata oluştu.",
+    });
   }
 });
 
-/* 🔔 Takipçi Artışını Dinle ve Bildirim Gönder */
-db.collection("users").onSnapshot(async (snapshot) => {
-  snapshot.docChanges().forEach(async (change) => {
-    if (change.type !== "modified") return;
-
-    const userDoc = change.doc;
-    const userId = userDoc.id;
-    const newFollowers = userDoc.data().followers || [];
-
-    const oldData = snapshot.docs.find(d => d.id === userId)?.data() || {};
-    const oldFollowers = oldData.followers || [];
-
-    const addedFollowers = newFollowers.filter(f => !oldFollowers.includes(f));
-    if (addedFollowers.length === 0) return;
-
-    for (const newFollowerId of addedFollowers) {
-      try {
-        const userSnap = await db.collection("users").doc(userId).get();
-        const newFollowerSnap = await db.collection("users").doc(newFollowerId).get();
-
-        if (!userSnap.exists || !newFollowerSnap.exists) return;
-
-        const fcmToken = userSnap.data().fcmToken;
-        const followerName = `${newFollowerSnap.data().firstName} ${newFollowerSnap.data().lastName}`;
-
-        if (fcmToken) {
-          const msg = {
-            token: fcmToken,
-            notification: {
-              title: "Yeni Takipçin Var!",
-              body: `${followerName} seni takip etmeye başladı.`,
-            },
-            android: {
-              priority: "high",
-              notification: {
-                sound: "default",
-                channelId: "default",
-                notificationCount: 1,
-              },
-            },
-          };
-
-          const response = await admin.messaging().send(msg);
-          console.log(`📣 ${userId} kullanıcısına bildirim gönderildi: ${response}`);
-        }
-      } catch (err) {
-        console.error(`❌ Takipçi bildirimi hatası (${userId}):`, err.message);
-      }
-    }
-  });
-});
-
-/* 🚀 Sunucuyu Başlat */
+/* 🚀 SUNUCU BAŞLAT */
 app.listen(PORT, () => {
   console.log(`🚀 Proxy + FCM sunucusu çalışıyor: http://localhost:${PORT}`);
 });
