@@ -138,8 +138,8 @@ function detectFollowersChanges() {
   const db = admin.firestore();
   const usersRef = db.collection("users");
 
-  usersRef.onSnapshot((snapshot) => {
-    snapshot.docChanges().forEach((change) => {
+  usersRef.onSnapshot(async (snapshot) => {
+    for (const change of snapshot.docChanges()) {
       const doc = change.doc;
       const data = doc.data();
       const userId = doc.id;
@@ -150,16 +150,27 @@ function detectFollowersChanges() {
         const newFollowers = data.followers || [];
 
         if (newFollowers.length > oldFollowers.length) {
-          const newFollower = newFollowers.find(f => !oldFollowers.includes(f));
-          console.log(`👤 ${userId} için yeni takipçi: ${newFollower}`);
+          const newFollowerId = newFollowers.find(f => !oldFollowers.includes(f));
+          console.log(`👤 ${userId} için yeni takipçi: ${newFollowerId}`);
 
-          const fcmToken = data.fcmToken;
-          if (fcmToken) {
+          try {
+            const newFollowerSnap = await db.collection("users").doc(newFollowerId).get();
+            const newFollowerData = newFollowerSnap.exists ? newFollowerSnap.data() : null;
+            const fullName = newFollowerData
+              ? `${newFollowerData.firstName || ""} ${newFollowerData.lastName || ""}`.trim()
+              : "Bir kullanıcı";
+
+            const fcmToken = data.fcmToken;
+            if (!fcmToken) {
+              console.warn(`⚠️ Kullanıcının fcmToken'ı yok: ${userId}`);
+              continue;
+            }
+
             const msg = {
               token: fcmToken,
               notification: {
                 title: "Yeni Takipçin Var!",
-                body: "Bir kullanıcı seni takip etti.",
+                body: `${fullName} seni takip etmeye başladı.`,
               },
               android: {
                 priority: "high",
@@ -171,19 +182,14 @@ function detectFollowersChanges() {
               },
             };
 
-            admin.messaging().send(msg)
-              .then((response) => {
-                console.log(`✅ Bildirim gönderildi: ${response}`);
-              })
-              .catch((error) => {
-                console.error("❌ Bildirim gönderilemedi:", error.message);
-              });
-          } else {
-            console.warn(`⚠️ Kullanıcının fcmToken'ı yok: ${userId}`);
+            await admin.messaging().send(msg);
+            console.log(`✅ Bildirim gönderildi -> ${userId} → ${fullName}`);
+          } catch (error) {
+            console.error("❌ Bildirim gönderme hatası:", error.message);
           }
         }
       }
-    });
+    }
   }, (error) => {
     console.error("🔥 Firestore takip dinleme hatası:", error);
   });
