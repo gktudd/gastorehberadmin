@@ -54,8 +54,9 @@ app.get("/api/places/search", async (req, res) => {
 });
 
 /* 📍 Place Details */
-app.get("/api/places/details/:placeId", async (req, res) => {
-  const placeId = req.params.placeId;
+// 📍 Place Details (query param ile)
+app.get("/api/places/details", async (req, res) => {
+  const placeId = req.query.placeId;
   if (!placeId) {
     return res.status(400).json({ error: "Place ID is required" });
   }
