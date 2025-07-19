@@ -79,6 +79,7 @@ app.get("/api/places/details/:placeId", async (req, res) => {
       url: result.url || "",
       geometry: result.geometry?.location || null,
       workingHours: result.opening_hours?.weekday_text || [],
+      rating: result.rating || 0,
     });
   } catch (error) {
     console.error("❌ Error fetching place details:", error.message);
