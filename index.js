@@ -54,34 +54,33 @@ app.get("/api/places/search", async (req, res) => {
 });
 
 /* 📍 Place Details */
-// 📍 Place Details (query param ile)
-app.get("/api/places/details", async (req, res) => {
-  const placeId = req.query.placeId;
+app.get("/api/places/details/:placeId", async (req, res) => {
+  const placeId = req.params.placeId;
   if (!placeId) {
     return res.status(400).json({ error: "Place ID is required" });
   }
 
   try {
-const response = await axios.get("https://maps.googleapis.com/maps/api/place/details/json", {
-  params: {
-    place_id: placeId,
-    fields: "place_id,name,formatted_address,formatted_phone_number,url,geometry,opening_hours,rating",
-    language: "tr",
-    key: GOOGLE_PLACES_API_KEY,
-  },
-});
+    const response = await axios.get("https://maps.googleapis.com/maps/api/place/details/json", {
+      params: {
+        place_id: placeId,
+        fields: "place_id,name,formatted_address,formatted_phone_number,url,geometry,opening_hours,rating",
+        language: "tr",
+        key: GOOGLE_PLACES_API_KEY,
+      },
+    });
 
     const result = response.data.result || {};
-res.json({
-  place_id: result.place_id || "",
-  name: result.name || "",
-  address: result.formatted_address || "",
-  phone: result.formatted_phone_number || "",
-  url: result.url || "",
-  geometry: result.geometry?.location || null,
-  workingHours: result.opening_hours?.weekday_text || [],
-  rating: result.rating || 0,
-});
+    res.json({
+      place_id: result.place_id || "",
+      name: result.name || "",
+      address: result.formatted_address || "",
+      phone: result.formatted_phone_number || "",
+      url: result.url || "",
+      geometry: result.geometry?.location || null,
+      workingHours: result.opening_hours?.weekday_text || [],
+      rating: result.rating || 0,
+    });
   } catch (error) {
     console.error("❌ Error fetching place details:", error.message);
     res.status(500).json({ error: "Failed to fetch place details" });
