@@ -64,7 +64,7 @@ app.get("/api/places/details/:placeId", async (req, res) => {
     const response = await axios.get("https://maps.googleapis.com/maps/api/place/details/json", {
       params: {
         place_id: placeId,
-        fields: "place_id,name,formatted_address,formatted_phone_number,url,geometry,opening_hours",
+        fields: "place_id,name,formatted_address,formatted_phone_number,url,geometry,opening_hours,rating",
         language: "tr",
         key: GOOGLE_PLACES_API_KEY,
       },
